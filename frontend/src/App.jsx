@@ -223,6 +223,7 @@ export default function App() {
   const [matches, setMatches] = useState(null)
   const [coaching, setCoaching] = useState(null)
   const [analysing, setAnalysing] = useState(false)
+  const [remaining, setRemaining] = useState(null)
 
   const handleSearch = async () => {
     setLoading(true)
@@ -250,6 +251,7 @@ export default function App() {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setCoaching(data)
+      setRemaining(data.remaining)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -300,7 +302,13 @@ export default function App() {
           {error && <p style={styles.error}>{error}</p>}
 
           {loading && <p style={styles.loadingText}>Loading match history...</p>}
-
+          {remaining !== null && (
+            <p style={{ fontSize: "13px", color: remaining === 0 ? "#e05555" : "#c89b3c", marginBottom: "16px" }}>
+              {remaining === 0 
+                ? "No analyses remaining today. Resets at midnight." 
+                : `${remaining} free ${remaining === 1 ? "analysis" : "analyses"} remaining today`}
+            </p>
+          )}
           {matches && !coaching && (
             <div>
               <p style={styles.sectionTitle}>Recent Games — Select one to analyse</p>
@@ -344,6 +352,9 @@ export default function App() {
                 <div style={styles.coachingHeader}>
                   <div style={styles.coachingChamp}>{coaching.playerStats.champion} <span style={{ color: "#c89b3c" }}>{coaching.playerStats.role}</span></div>
                   <div style={styles.coachingStats}>{coaching.playerStats.kills}/{coaching.playerStats.deaths}/{coaching.playerStats.assists} · {coaching.playerStats.cs} CS · {coaching.playerStats.gameDuration} mins · {coaching.playerStats.win ? "WIN" : "LOSS"}</div>
+                  <p style={{ fontSize: "13px", color: "#c89b3c", marginTop: "8px" }}>
+                    {coaching.remaining} free {coaching.remaining === 1 ? "analysis" : "analyses"} remaining today
+                  </p>
                 </div>
                 <div style={styles.coachingText}>
                   {coaching.coaching.split('\n').map((line, i) => {

@@ -7,11 +7,41 @@ const Anthropic = require('@anthropic-ai/sdk')
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const NodeCache = require('node-cache')
 const cache = new NodeCache({ stdTTL: 86400 }) // cache for 24 hours
-
+const { createClient } = require('@supabase/supabase-js')
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+async function checkAndIncrementUsage(ip) {
+  const today = new Date().toISOString().split('T')[0]
+  
+  const { data, error } = await supabase
+    .from('ip_usage')
+    .select('*')
+    .eq('ip_address', ip)
+    .single()
+
+  if (!data) {
+    await supabase.from('ip_usage').insert({ ip_address: ip, analysis_count: 1, last_reset: today })
+    return { allowed: true, remaining: 2 }
+  }
+
+  if (data.last_reset !== today) {
+    await supabase.from('ip_usage').update({ analysis_count: 1, last_reset: today }).eq('ip_address', ip)
+    return { allowed: true, remaining: 2 }
+  }
+
+  if (data.analysis_count >= 3) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  await supabase.from('ip_usage').update({ analysis_count: data.analysis_count + 1 }).eq('ip_address', ip)
+  return { allowed: true, remaining: 3 - data.analysis_count - 1 }
+}
+
+
 
 app.get('/summoner/:name/:tag', async (req, res) => {
   try {
@@ -92,12 +122,16 @@ app.get('/analyse/:matchId/:participantId', async (req, res) => {
 app.get('/coaching/:matchId/:participantId', async (req, res) => {
   try {
     const { matchId, participantId } = req.params
-    
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+    const usage = await checkAndIncrementUsage(ip)
+    if (!usage.allowed) {
+      return res.status(429).json({ error: 'Daily limit reached. Upgrade to continue.' })
+    }
     const cacheKey = `coaching_${matchId}_${participantId}`
     const cached = cache.get(cacheKey)
     if (cached) {
       console.log('returning cached result for', cacheKey)
-      return res.json(cached)
+      return res.json({ ...cached, remaining: usage.remaining })
     }
 
     const [timelineResponse, matchResponse] = await Promise.all([
@@ -173,7 +207,8 @@ ${JSON.stringify(keyEvents, null, 2)}`
     const result = {
       playerStats,
       keyEvents,
-      coaching: message.content[0].text
+      coaching: message.content[0].text,
+      remaining: usage.remaining
     }
     cache.set(cacheKey, result)
     res.json(result)
