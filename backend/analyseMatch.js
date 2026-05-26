@@ -60,7 +60,7 @@ function extractKeyEvents(timeline, targetParticipantId, matchData) {
 }
 
 function extractPlayerStats(matchData, targetParticipantId) {
-  const participant = matchData.info.participants[targetParticipantId - 1]
+  const participant = matchData.info.participants.find(p => p.participantId === targetParticipantId)
   const gameDuration = Math.floor(matchData.info.gameDuration / 60)
 
   return {
@@ -70,8 +70,8 @@ function extractPlayerStats(matchData, targetParticipantId) {
     kills: participant.kills,
     deaths: participant.deaths,
     assists: participant.assists,
-    cs: participant.totalMinionsKilled,
-    csPerMin: (participant.totalMinionsKilled / gameDuration).toFixed(1),
+    cs: participant.totalMinionsKilled + participant.neutralMinionsKilled,
+    csPerMin: ((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDuration).toFixed(1),
     goldEarned: participant.goldEarned,
     visionScore: participant.visionScore,
     wardsPlaced: participant.wardsPlaced,

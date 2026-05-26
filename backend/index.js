@@ -121,6 +121,7 @@ IMPORTANT RULES:
 - Reference champion names not player numbers
 - Factor in CS progression over time
 - Tailor advice to whether they were winning or losing
+- Do not default to the same coaching categories every game. Look at what is actually unusual or notable in this specific game's data and coach on that. If vision was fine, don't mention vision. If CS was good, acknowledge it and move on. Only coach on what genuinely stands out as a problem in this specific game.
 
 Player stats:
 ${JSON.stringify(playerStats, null, 2)}
