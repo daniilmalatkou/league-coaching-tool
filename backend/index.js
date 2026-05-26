@@ -12,7 +12,9 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: 'https://league-coaching-tool.vercel.app'
+}))
 app.use(express.json())
 
 async function checkAndIncrementUsage(ip) {
