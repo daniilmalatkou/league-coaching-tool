@@ -15,6 +15,8 @@ app.use(cors())
 app.use(express.json())
 
 async function checkAndIncrementUsage(ip) {
+  console.log('checking ip:', ip)
+  console.log('supabase url:', process.env.SUPABASE_URL)
   const today = new Date().toISOString().split('T')[0]
   
   const { data, error } = await supabase
@@ -37,7 +39,8 @@ async function checkAndIncrementUsage(ip) {
     return { allowed: false, remaining: 0 }
   }
 
-  await supabase.from('ip_usage').update({ analysis_count: data.analysis_count + 1 }).eq('ip_address', ip)
+  const { error: updateError } = await supabase.from('ip_usage').update({ analysis_count: data.analysis_count + 1 }).eq('ip_address', ip)
+  console.log('updated count to:', data.analysis_count + 1, 'error:', updateError)
   return { allowed: true, remaining: 3 - data.analysis_count - 1 }
 }
 
@@ -121,12 +124,15 @@ app.get('/analyse/:matchId/:participantId', async (req, res) => {
 
 app.get('/coaching/:matchId/:participantId', async (req, res) => {
   try {
+    console.log('coaching route hit')
     const { matchId, participantId } = req.params
+
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
     const usage = await checkAndIncrementUsage(ip)
     if (!usage.allowed) {
       return res.status(429).json({ error: 'Daily limit reached. Upgrade to continue.' })
     }
+
     const cacheKey = `coaching_${matchId}_${participantId}`
     const cached = cache.get(cacheKey)
     if (cached) {
@@ -207,11 +213,10 @@ ${JSON.stringify(keyEvents, null, 2)}`
     const result = {
       playerStats,
       keyEvents,
-      coaching: message.content[0].text,
-      remaining: usage.remaining
+      coaching: message.content[0].text
     }
     cache.set(cacheKey, result)
-    res.json(result)
+    res.json({ ...result, remaining: usage.remaining })
   } catch (error) {
     res.status(500).json({ error: error.response?.data || error.message })
   }
