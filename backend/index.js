@@ -129,10 +129,18 @@ app.get('/coaching/:matchId/:participantId', async (req, res) => {
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
     const usage = await checkAndIncrementUsage(ip)
+    if (!data) {
+    const { error: insertError } = await supabase.from('ip_usage').insert({ ip_address: ip, analysis_count: 1, last_reset: today })
+    console.log('insert error:', insertError)
+    return { allowed: true, remaining: 2 }
     if (!usage.allowed) {
       return res.status(429).json({ error: 'Daily limit reached. Upgrade to continue.' })
     }
-
+    if (!data) {
+    const { error: insertError } = await supabase.from('ip_usage').insert({ ip_address: ip, analysis_count: 1, last_reset: today })
+    console.log('insert error:', insertError)
+    return { allowed: true, remaining: 2 }
+}
     const cacheKey = `coaching_${matchId}_${participantId}`
     const cached = cache.get(cacheKey)
     if (cached) {
