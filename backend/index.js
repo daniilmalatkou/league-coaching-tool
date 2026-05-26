@@ -25,6 +25,8 @@ async function checkAndIncrementUsage(ip) {
     .eq('ip_address', ip)
     .single()
 
+  console.log('supabase data:', data, 'supabase error:', error)
+
   if (!data) {
     await supabase.from('ip_usage').insert({ ip_address: ip, analysis_count: 1, last_reset: today })
     return { allowed: true, remaining: 2 }
