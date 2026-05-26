@@ -1,4 +1,5 @@
 import { useState } from "react"
+import Pricing from "./Pricing"
 
 const styles = {
   root: {
@@ -298,76 +299,77 @@ export default function App() {
           </div>
         </div>
 
-        <div style={styles.content}>
-          {error && <p style={styles.error}>{error}</p>}
+          <div style={styles.content}>
+            {error && <p style={styles.error}>{error}</p>}
 
-          {loading && <p style={styles.loadingText}>Loading match history...</p>}
-          {remaining !== null && (
-            <p style={{ fontSize: "13px", color: remaining === 0 ? "#e05555" : "#c89b3c", marginBottom: "16px" }}>
-              {remaining === 0 
-                ? "No analyses remaining today. Resets at midnight." 
-                : `${remaining} free ${remaining === 1 ? "analysis" : "analyses"} remaining today`}
-            </p>
-          )}
-          {matches && !coaching && (
-            <div>
-              <p style={styles.sectionTitle}>Recent Games — Select one to analyse</p>
-              {matches.summaries.map(m => (
-                <div key={m.matchId} style={{
-                  ...styles.matchCard,
-                  borderLeft: `3px solid ${m.win ? "#3c7a4a" : "#7a3c3c"}`
-                }}>
-                  <div style={styles.matchLeft}>
-                    <span style={{
-                      ...styles.winBadge,
-                      background: m.win ? "#1a3a22" : "#3a1a1a",
-                      color: m.win ? "#4caf70" : "#af4c4c"
-                    }}>
-                      {m.win ? "WIN" : "LOSS"}
-                    </span>
-                    <div>
-                      <div style={styles.matchChamp}>{m.champion} <span style={{ color: "#44445a", fontWeight: 400, fontSize: "13px" }}>{m.role}</span></div>
-                      <div style={styles.matchMeta}>{m.kills}/{m.deaths}/{m.assists} · {m.cs} CS · {m.gameDuration}m</div>
-                      <div style={styles.matchTime}>{new Date(m.gameCreation).toLocaleDateString()} · {timeAgo(m.gameCreation)}</div>
+            {loading && <p style={styles.loadingText}>Loading match history...</p>}
+            {remaining !== null && (
+              <p style={{ fontSize: "13px", color: remaining === 0 ? "#e05555" : "#c89b3c", marginBottom: "16px" }}>
+                {remaining === 0 
+                  ? "No analyses remaining today. Resets at midnight." 
+                  : `${remaining} free ${remaining === 1 ? "analysis" : "analyses"} remaining today`}
+              </p>
+            )}
+            {matches && !coaching && (
+              <div>
+                <p style={styles.sectionTitle}>Recent Games — Select one to analyse</p>
+                {matches.summaries.map(m => (
+                  <div key={m.matchId} style={{
+                    ...styles.matchCard,
+                    borderLeft: `3px solid ${m.win ? "#3c7a4a" : "#7a3c3c"}`
+                  }}>
+                    <div style={styles.matchLeft}>
+                      <span style={{
+                        ...styles.winBadge,
+                        background: m.win ? "#1a3a22" : "#3a1a1a",
+                        color: m.win ? "#4caf70" : "#af4c4c"
+                      }}>
+                        {m.win ? "WIN" : "LOSS"}
+                      </span>
+                      <div>
+                        <div style={styles.matchChamp}>{m.champion} <span style={{ color: "#44445a", fontWeight: 400, fontSize: "13px" }}>{m.role}</span></div>
+                        <div style={styles.matchMeta}>{m.kills}/{m.deaths}/{m.assists} · {m.cs} CS · {m.gameDuration}m</div>
+                        <div style={styles.matchTime}>{new Date(m.gameCreation).toLocaleDateString()} · {timeAgo(m.gameCreation)}</div>
+                      </div>
                     </div>
+                    <button
+                      style={styles.analyseBtn}
+                      onClick={() => handleAnalyse(m.matchId, m.participantId)}
+                      disabled={analysing}
+                    >
+                      {analysing ? "..." : "Analyse"}
+                    </button>
                   </div>
-                  <button
-                    style={styles.analyseBtn}
-                    onClick={() => handleAnalyse(m.matchId, m.participantId)}
-                    disabled={analysing}
-                  >
-                    {analysing ? "..." : "Analyse"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {analysing && <p style={styles.loadingText}>Analysing your game...</p>}
+            {analysing && <p style={styles.loadingText}>Analysing your game...</p>}
 
-          {coaching && (
-            <div>
-              <button style={styles.backBtn} onClick={() => setCoaching(null)}>← Back to matches</button>
-              <div style={styles.coachingCard}>
-                <div style={styles.coachingHeader}>
-                  <div style={styles.coachingChamp}>{coaching.playerStats.champion} <span style={{ color: "#c89b3c" }}>{coaching.playerStats.role}</span></div>
-                  <div style={styles.coachingStats}>{coaching.playerStats.kills}/{coaching.playerStats.deaths}/{coaching.playerStats.assists} · {coaching.playerStats.cs} CS · {coaching.playerStats.gameDuration} mins · {coaching.playerStats.win ? "WIN" : "LOSS"}</div>
-                  <p style={{ fontSize: "13px", color: "#c89b3c", marginTop: "8px" }}>
-                    {coaching.remaining} free {coaching.remaining === 1 ? "analysis" : "analyses"} remaining today
-                  </p>
-                </div>
-                <div style={styles.coachingText}>
-                  {coaching.coaching.split('\n').map((line, i) => {
-                    const boldParsed = line.split(/\*\*(.*?)\*\*/g).map((part, j) =>
-                      j % 2 === 1 ? <strong key={j} style={{ color: "#f0f0fa" }}>{part}</strong> : part
-                    )
-                    return <p key={i} style={{ marginBottom: line === '' ? '8px' : '4px' }}>{boldParsed}</p>
-                  })}
+            {coaching && (
+              <div>
+                <button style={styles.backBtn} onClick={() => setCoaching(null)}>← Back to matches</button>
+                <div style={styles.coachingCard}>
+                  <div style={styles.coachingHeader}>
+                    <div style={styles.coachingChamp}>{coaching.playerStats.champion} <span style={{ color: "#c89b3c" }}>{coaching.playerStats.role}</span></div>
+                    <div style={styles.coachingStats}>{coaching.playerStats.kills}/{coaching.playerStats.deaths}/{coaching.playerStats.assists} · {coaching.playerStats.cs} CS · {coaching.playerStats.gameDuration} mins · {coaching.playerStats.win ? "WIN" : "LOSS"}</div>
+                    <p style={{ fontSize: "13px", color: "#c89b3c", marginTop: "8px" }}>
+                      {coaching.remaining} free {coaching.remaining === 1 ? "analysis" : "analyses"} remaining today
+                    </p>
+                  </div>
+                  <div style={styles.coachingText}>
+                    {coaching.coaching.split('\n').map((line, i) => {
+                      const boldParsed = line.split(/\*\*(.*?)\*\*/g).map((part, j) =>
+                        j % 2 === 1 ? <strong key={j} style={{ color: "#f0f0fa" }}>{part}</strong> : part
+                      )
+                      return <p key={i} style={{ marginBottom: line === '' ? '8px' : '4px' }}>{boldParsed}</p>
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        <Pricing />
       </div>
     </>
   )

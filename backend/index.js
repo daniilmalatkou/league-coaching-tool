@@ -9,6 +9,7 @@ const NodeCache = require('node-cache')
 const cache = new NodeCache({ stdTTL: 86400 }) // cache for 24 hours
 const { createClient } = require('@supabase/supabase-js')
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 const app = express()
 app.use(cors())
@@ -284,6 +285,39 @@ app.get('/rank/:summonerId', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.response?.data || error.message })
   }
+})
+
+app.post('/create-checkout-session', async (req, res) => {
+  try {
+    const { priceId } = req.body
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: 'https://league-coaching-tool.vercel.app/success',
+      cancel_url: 'https://league-coaching-tool.vercel.app/',
+    })
+    res.json({ url: session.url })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature']
+  let event
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`)
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object
+    console.log('Payment successful:', session.customer_email)
+  }
+
+  res.json({ received: true })
 })
 
 app.listen(3001, () => {
