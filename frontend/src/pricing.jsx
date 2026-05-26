@@ -3,7 +3,7 @@ const PLANS = [
     name: "Free",
     price: "€0",
     period: "forever",
-    features: ["3 analyses per day", "Standard coaching", "Last 5 games"],
+    features: ["3 analyses per day", "Standard coaching", "Last 5 games", "Match history with account"],
     priceId: null,
     cta: "Current plan"
   },
