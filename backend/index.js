@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const { extractKeyEvents, extractPlayerStats } = require('./analyseMatch')
+const { extractKeyEvents, extractPlayerStats, extractTeamContext, extractCSTimeline } = require('./analyseMatch')
 require('dotenv').config()
 const axios = require('axios')
 const Anthropic = require('@anthropic-ai/sdk')
@@ -101,22 +101,42 @@ app.get('/coaching/:matchId/:participantId', async (req, res) => {
       )
     ])
 
-    const keyEvents = extractKeyEvents(timelineResponse.data, parseInt(participantId))
+    const keyEvents = extractKeyEvents(timelineResponse.data, parseInt(participantId), matchResponse.data)
     const playerStats = extractPlayerStats(matchResponse.data, parseInt(participantId))
+    const teamContext = extractTeamContext(matchResponse.data) 
+    const csTimeline = extractCSTimeline(timelineResponse.data, parseInt(participantId))   
 
-    const prompt = `You are an expert League of Legends coach. Analyse this player's game and give specific, honest coaching feedback focused on macro decisions and positioning. Do not just list stats. Point out specific moments where better decisions could have been made and explain why.
+    const prompt = `You are a calm, high level League of Legends coach. Analyse this player's game and give specific coaching feedback in 3 points maximum. Be concise — players won't read long paragraphs. Each point should be 3-5 sentences max.
+
+IMPORTANT RULES:
+- Plain conversational English only, no coordinates, no brackets, no raw data
+- Separate observed facts from interpretation — use words like "suggests", "likely", "possibly"
+- Never use absolute language like "completely" or "always" — keep certainty proportional to the evidence
+- Never invent precise numbers or time estimates unless they come directly from the data provided
+- Do not assume enemy intent — avoid saying things like "they were hunting you" unless the data clearly shows repeated targeted ganks
+- Be direct but calm and constructive — never harsh or emotional
+- Always acknowledge at least one thing the player did reasonably well before or during coaching a mistake
+- Focus on map state changes and consequence chains — explain WHY the map became unsafe rather than just pointing out individual deaths
+- Never say "play safer" without immediately following it with a specific visual example of what safer looks like in that situation
+- Reference champion names not player numbers
+- Factor in CS progression over time
+- Tailor advice to whether they were winning or losing
 
 Player stats:
 ${JSON.stringify(playerStats, null, 2)}
 
-Key events from the game:
-${JSON.stringify(keyEvents, null, 2)}
+CS progression:
+${JSON.stringify(csTimeline, null, 2)}
 
-Give 3-5 specific coaching points. For each death, explain what likely went wrong and what the correct decision would have been. Focus on macro — wave management, objective control, positioning, map awareness. Be direct and specific, not generic.`
+Team composition:
+${JSON.stringify(teamContext, null, 2)}
+
+Key events:
+${JSON.stringify(keyEvents, null, 2)}`
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
 
