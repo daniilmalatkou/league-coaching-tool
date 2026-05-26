@@ -5,6 +5,9 @@ require('dotenv').config()
 const axios = require('axios')
 const Anthropic = require('@anthropic-ai/sdk')
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const NodeCache = require('node-cache')
+const cache = new NodeCache({ stdTTL: 86400 }) // cache for 24 hours
+
 
 const app = express()
 app.use(cors())
@@ -89,6 +92,13 @@ app.get('/analyse/:matchId/:participantId', async (req, res) => {
 app.get('/coaching/:matchId/:participantId', async (req, res) => {
   try {
     const { matchId, participantId } = req.params
+    
+    const cacheKey = `coaching_${matchId}_${participantId}`
+    const cached = cache.get(cacheKey)
+    if (cached) {
+      console.log('returning cached result for', cacheKey)
+      return res.json(cached)
+    }
 
     const [timelineResponse, matchResponse] = await Promise.all([
       axios.get(
@@ -108,6 +118,17 @@ app.get('/coaching/:matchId/:participantId', async (req, res) => {
 
 
     let rankData = { rank: 'Unranked', lp: 0 }
+    try {
+      const rankRes = await axios.get(
+        `https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/${playerStats.summonerId}`,
+        { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+      )
+      const soloQ = rankRes.data.find(e => e.queueType === 'RANKED_SOLO_5x5')
+      if (soloQ) rankData = { rank: `${soloQ.tier} ${soloQ.rank}`, lp: soloQ.leaguePoints }
+    } catch (rankError) {
+      console.log('rank fetch error:', rankError.response?.data || rankError.message)
+    }
+
     const prompt = `You are a calm, high level League of Legends coach. Analyse this player's game and give specific coaching feedback in 3 points maximum. Be concise — players won't read long paragraphs. Each point should be 3-5 sentences max.
 
 IMPORTANT RULES:
@@ -149,11 +170,13 @@ ${JSON.stringify(keyEvents, null, 2)}`
       messages: [{ role: 'user', content: prompt }]
     })
 
-    res.json({ 
-      playerStats, 
-      keyEvents, 
-      coaching: message.content[0].text 
-    })
+    const result = {
+      playerStats,
+      keyEvents,
+      coaching: message.content[0].text
+    }
+    cache.set(cacheKey, result)
+    res.json(result)
   } catch (error) {
     res.status(500).json({ error: error.response?.data || error.message })
   }
