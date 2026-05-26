@@ -1,5 +1,5 @@
 import { useState } from "react"
-import Pricing from "./Pricing"
+import Pricing from "./Pricing.jsx"
 
 const styles = {
   root: {
