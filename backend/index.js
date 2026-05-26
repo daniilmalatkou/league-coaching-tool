@@ -151,6 +151,55 @@ ${JSON.stringify(keyEvents, null, 2)}`
   }
 })
 
+app.get('/matchlist/:name/:tag', async (req, res) => {
+  try {
+    const { name, tag } = req.params
+
+    const accountRes = await axios.get(
+      `https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${name}/${tag}`,
+      { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+    )
+    const { puuid } = accountRes.data
+
+    const matchIdsRes = await axios.get(
+      `https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?count=10`,
+      { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+    )
+    const matchIds = matchIdsRes.data
+
+    const matchDetails = await Promise.all(
+      matchIds.map(id => axios.get(
+        `https://europe.api.riotgames.com/lol/match/v5/matches/${id}`,
+        { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+      ))
+    )
+
+    const summaries = matchDetails.map((res, i) => {
+      const match = res.data
+      const participant = match.info.participants.find(p => p.puuid === puuid)
+      return {
+        matchId: matchIds[i],
+        participantId: participant.participantId,
+        champion: participant.championName,
+        role: participant.teamPosition,
+        kills: participant.kills,
+        deaths: participant.deaths,
+        assists: participant.assists,
+        cs: participant.totalMinionsKilled + participant.neutralMinionsKilled,
+        win: participant.win,
+        gameDuration: Math.floor(match.info.gameDuration / 60),
+        gameCreation: match.info.gameCreation
+      }
+    })
+    
+    const filtered = summaries.filter(m => m.gameDuration > 3).slice(0, 5)
+    res.json({ puuid, summaries: filtered })
+  } catch (error) {
+    res.status(500).json({ error: error.response?.data || error.message })
+  }
+})
+
+
 app.listen(3001, () => {
   console.log('Backend running on port 3001')
 })
