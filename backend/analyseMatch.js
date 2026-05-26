@@ -82,6 +82,7 @@ function extractPlayerStats(matchData, targetParticipantId) {
     totalTimeSpentDead: participant.totalTimeSpentDead,
     turretsLost: participant.turretsLost,
     win: participant.win,
+    summonerId: participant.summonerId,
     gameDuration
   }
 }

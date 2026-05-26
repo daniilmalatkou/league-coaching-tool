@@ -106,6 +106,19 @@ app.get('/coaching/:matchId/:participantId', async (req, res) => {
     const teamContext = extractTeamContext(matchResponse.data) 
     const csTimeline = extractCSTimeline(timelineResponse.data, parseInt(participantId))   
 
+    console.log('summonerId:', playerStats.summonerId)
+
+    const rankRes = await axios.get(
+      `https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/${playerStats.summonerId}`,
+      { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+    )
+    const soloQ = rankRes.data.find(e => e.queueType === 'RANKED_SOLO_5x5')
+    const rankData = soloQ 
+      ? { rank: `${soloQ.tier} ${soloQ.rank}`, lp: soloQ.leaguePoints }
+      : { rank: 'Unranked', lp: 0 }
+
+    console.log('summonerId:', playerStats.summonerId)
+
     const prompt = `You are a calm, high level League of Legends coach. Analyse this player's game and give specific coaching feedback in 3 points maximum. Be concise — players won't read long paragraphs. Each point should be 3-5 sentences max.
 
 IMPORTANT RULES:
@@ -122,9 +135,15 @@ IMPORTANT RULES:
 - Factor in CS progression over time
 - Tailor advice to whether they were winning or losing
 - Do not default to the same coaching categories every game. Look at what is actually unusual or notable in this specific game's data and coach on that. If vision was fine, don't mention vision. If CS was good, acknowledge it and move on. Only coach on what genuinely stands out as a problem in this specific game.
+- Do not mention control wards unless it is clearly the most important issue in the game. If you mention vision, it must be the single biggest factor in that specific game, not a generic tip
+- If the data shows the enemy team had one or more players with significantly more kills than the entire enemy team average, acknowledge the game may have been very difficult to influence and adjust coaching accordingly
+
 
 Player stats:
 ${JSON.stringify(playerStats, null, 2)}
+
+Player rank: 
+${rankData.rank} ${rankData.lp ? rankData.lp + 'LP' : ''}
 
 CS progression:
 ${JSON.stringify(csTimeline, null, 2)}
@@ -199,6 +218,20 @@ app.get('/matchlist/:name/:tag', async (req, res) => {
   }
 })
 
+app.get('/rank/:summonerId', async (req, res) => {
+  try {
+    const { summonerId } = req.params
+    const response = await axios.get(
+      `https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/${summonerId}`,
+      { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
+    )
+    const soloQ = response.data.find(e => e.queueType === 'RANKED_SOLO_5x5')
+    if (!soloQ) return res.json({ rank: 'Unranked' })
+    res.json({ rank: `${soloQ.tier} ${soloQ.rank}`, lp: soloQ.leaguePoints })
+  } catch (error) {
+    res.status(500).json({ error: error.response?.data || error.message })
+  }
+})
 
 app.listen(3001, () => {
   console.log('Backend running on port 3001')
