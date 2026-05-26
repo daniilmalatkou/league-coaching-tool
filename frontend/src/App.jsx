@@ -230,7 +230,7 @@ export default function App() {
     setMatches(null)
     setCoaching(null)
     try {
-      const res = await fetch(`http://localhost:3001/matchlist/${summonerName}/${tag}`)
+      const res = await fetch(`http://zealous-purpose-production-9cbe.up.railway.app/matchlist/${summonerName}/${tag}`)
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setMatches({ puuid: data.puuid, summaries: data.summaries })
@@ -246,7 +246,7 @@ export default function App() {
     setError(null)
     setCoaching(null)
     try {
-      const res = await fetch(`http://localhost:3001/coaching/${matchId}/${participantId}`)
+      const res = await fetch(`http://zealous-purpose-production-9cbe.up.railway.app/coaching/${matchId}/${participantId}`)
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setCoaching(data)
