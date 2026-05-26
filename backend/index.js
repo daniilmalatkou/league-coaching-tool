@@ -106,19 +106,8 @@ app.get('/coaching/:matchId/:participantId', async (req, res) => {
     const teamContext = extractTeamContext(matchResponse.data) 
     const csTimeline = extractCSTimeline(timelineResponse.data, parseInt(participantId))   
 
-    console.log('summonerId:', playerStats.summonerId)
 
-    const rankRes = await axios.get(
-      `https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/${playerStats.summonerId}`,
-      { headers: { 'X-Riot-Token': process.env.RIOT_API_KEY } }
-    )
-    const soloQ = rankRes.data.find(e => e.queueType === 'RANKED_SOLO_5x5')
-    const rankData = soloQ 
-      ? { rank: `${soloQ.tier} ${soloQ.rank}`, lp: soloQ.leaguePoints }
-      : { rank: 'Unranked', lp: 0 }
-
-    console.log('summonerId:', playerStats.summonerId)
-
+    let rankData = { rank: 'Unranked', lp: 0 }
     const prompt = `You are a calm, high level League of Legends coach. Analyse this player's game and give specific coaching feedback in 3 points maximum. Be concise — players won't read long paragraphs. Each point should be 3-5 sentences max.
 
 IMPORTANT RULES:
@@ -137,7 +126,7 @@ IMPORTANT RULES:
 - Do not default to the same coaching categories every game. Look at what is actually unusual or notable in this specific game's data and coach on that. If vision was fine, don't mention vision. If CS was good, acknowledge it and move on. Only coach on what genuinely stands out as a problem in this specific game.
 - Do not mention control wards unless it is clearly the most important issue in the game. If you mention vision, it must be the single biggest factor in that specific game, not a generic tip
 - If the data shows the enemy team had one or more players with significantly more kills than the entire enemy team average, acknowledge the game may have been very difficult to influence and adjust coaching accordingly
-
+- If rank is Unranked or unknown, assume the player is a beginner to intermediate level and coach accordingly
 
 Player stats:
 ${JSON.stringify(playerStats, null, 2)}
